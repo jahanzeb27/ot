@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shift & Overtime Tracker</title>
+    <style>
+        * { 
+            box-sizing: border-box; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+        }
+        
+        body { 
+            background-color: #f4f6f9; 
+            color: #1a202c; 
+            margin: 0; 
+            padding: 20px 15px; 
+            display: flex; 
+            justify-content: center; 
+        }
+        
+        .app-container { 
+            width: 100%; 
+            max-width: 440px; 
+            background: #ffffff;
+            padding: 24px 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            position: relative;
+        }
+
+        /* View Switching (Calendar vs Settings Page) */
+        .page-view { display: block; }
+        .page-view.hidden { display: none; }
+
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .app-header-text h2 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .app-header-text p {
+            margin: 3px 0 0 0;
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .icon-btn {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 7px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #475569;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .icon-btn:hover {
+            background: #e2e8f0;
+        }
+
+        /* Settings Page Styling */
+        .settings-form-group {
+            margin-bottom: 18px;
+        }
+
+        .settings-form-group label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #475569;
+            display: block;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .settings-form-group input {
+            width: 100%;
+            padding: 11px 14px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #0f172a;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .settings-form-group input:focus {
+            border-color: #2563eb;
+        }
+
+        .save-settings-btn {
+            width: 100%;
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        /* Nav & Calendar UI */
+        .nav-bar { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 16px; 
+        }
+
+        .nav-btn { 
+            background: #f1f5f9; 
+            color: #334155; 
+            border: 1px solid #cbd5e1; 
+            padding: 8px 16px; 
+            border-radius: 8px; 
+            font-weight: 600; 
+            font-size: 13px;
+            cursor: pointer; 
+        }
+
+        .month-title { 
+            font-size: 17px; 
+            font-weight: 700; 
+            color: #0f172a;
+        }
+
+        .summary-card { 
+            background: #eff6ff; 
+            border-left: 4px solid #2563eb; 
+            padding: 12px 16px; 
+            border-radius: 10px; 
+            margin-bottom: 18px; 
+            font-size: 13px; 
+            color: #1e40af;
+            line-height: 1.6; 
+        }
+
+        .legend { 
+            display: flex; 
+            justify-content: space-between; 
+            margin-bottom: 16px; 
+            font-size: 11px; 
+            font-weight: 600;
+            color: #475569;
+            background: #f8fafc;
+            padding: 8px 12px;
+            border-radius: 8px;
+        }
+
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .dot { width: 10px; height: 10px; border-radius: 3px; }
+        
+        .calendar-grid { 
+            display: grid; 
+            grid-template-columns: repeat(7, 1fr); 
+            gap: 6px; 
+        }
+
+        .day-header { 
+            text-align: center; 
+            font-size: 11px; 
+            font-weight: 700; 
+            color: #94a3b8; 
+            padding-bottom: 6px; 
+            text-transform: uppercase;
+        }
+
+        .day-card { 
+            background: #f1f5f9; 
+            aspect-ratio: 1; 
+            border-radius: 8px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            border: 1px solid #e2e8f0; 
+            user-select: none; 
+            transition: transform 0.1s;
+        }
+
+        .day-card:active { transform: scale(0.96); }
+        .day-num { font-size: 14px; font-weight: 700; }
+        .day-sub { font-size: 10px; font-weight: 600; margin-top: 2px; }
+        
+        /* Light Theme Status Colors */
+        .status-work { background: #10b981 !important; color: #ffffff !important; border-color: #059669 !important; }
+        .status-off { background: #f1f5f9 !important; color: #64748b !important; border-color: #e2e8f0 !important; }
+        .status-ot { background: #f59e0b !important; color: #ffffff !important; border-color: #d97706 !important; }
+        .status-leave { background: #3b82f6 !important; color: #ffffff !important; border-color: #2563eb !important; }
+
+        /* Modal Dialog */
+        .modal-overlay { 
+            display: none; 
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            background: rgba(15, 23, 42, 0.4); 
+            backdrop-filter: blur(4px);
+            justify-content: center; 
+            align-items: center; 
+            z-index: 100;
+        }
+
+        .modal { 
+            background: #ffffff; 
+            width: 90%; 
+            max-width: 360px; 
+            padding: 24px; 
+            border-radius: 16px; 
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-btns { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 10px; 
+            margin-top: 18px; 
+        }
+
+        .modal-btn { 
+            padding: 11px; 
+            border: none; 
+            border-radius: 8px; 
+            font-weight: 600; 
+            font-size: 13px;
+            cursor: pointer; 
+            color: white; 
+        }
+
+        .btn-full-ot { background: #f59e0b; }
+        .btn-half-ot { background: #d97706; }
+        .btn-leave { background: #3b82f6; }
+        .btn-reset { background: #64748b; }
+        .btn-cancel { 
+            background: #f1f5f9; 
+            color: #334155;
+            border: 1px solid #cbd5e1;
+            grid-column: span 2; 
+            margin-top: 4px; 
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    
+    <!-- MAIN CALENDAR PAGE VIEW -->
+    <div id="calendarView" class="page-view">
+        <div class="app-header">
+            <div class="app-header-text">
+                <h2>Shift Rota Tracker</h2>
+                <p>4-On / 4-Off Schedule</p>
+            </div>
+            <button class="icon-btn" onclick="showPage('settingsView')">⚙ Settings</button>
+        </div>
+
+        <div class="nav-bar">
+            <button class="nav-btn" onclick="changeMonth(-1)">◀ Prev</button>
+            <span class="month-title" id="monthTitle"></span>
+            <button class="nav-btn" onclick="changeMonth(1)">Next ▶</button>
+        </div>
+
+        <div class="summary-card" id="summaryCard">
+            Scheduled: 0h | Overtime: 0h<br><b>Total Hours: 0h</b>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item"><div class="dot" style="background:#10b981"></div> Work</div>
+            <div class="legend-item"><div class="dot" style="background:#cbd5e1"></div> Off</div>
+            <div class="legend-item"><div class="dot" style="background:#f59e0b"></div> Overtime</div>
+            <div class="legend-item"><div class="dot" style="background:#3b82f6"></div> Leave</div>
+        </div>
+
+        <div class="calendar-grid" id="calendarGrid"></div>
+    </div>
+
+    <!-- SEPARATE SETTINGS PAGE VIEW -->
+    <div id="settingsView" class="page-view hidden">
+        <div class="app-header">
+            <div class="app-header-text">
+                <h2>App Settings</h2>
+                <p>Configure Rota & Overtime Defaults</p>
+            </div>
+            <button class="icon-btn" onclick="showPage('calendarView')">◀ Back</button>
+        </div>
+
+        <div class="settings-form-group">
+            <label>1. Shift Start Date (Pehla Work Day):</label>
+            <input type="date" id="startDateInput">
+        </div>
+
+        <div class="settings-form-group">
+            <label>2. Standard OT (Minutes):</label>
+            <input type="number" id="stdOtInput" placeholder="e.g. 30 or 60">
+            <small style="font-size: 11px; color:#64748b; margin-top:4px; display:block;">Default overtime duration in minutes for quick entry.</small>
+        </div>
+
+        <button class="save-settings-btn" onclick="saveSettings()">Save & Update Rota</button>
+    </div>
+
+</div>
+
+<!-- Modal Dialog -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+        <h3 id="modalTitle" style="margin:0 0 6px 0; color:#0f172a; font-size:18px;">Edit Day</h3>
+        <p style="font-size: 13px; color:#64748b; margin:0;">Select Overtime or Status for this day:</p>
+        <div class="modal-btns" id="modalButtonsContainer"></div>
+    </div>
+</div>
+
+<script>
+    let appData = JSON.parse(localStorage.getItem('rotaAppData')) || {
+        startDate: '2026-01-01',
+        standardOtMins: 30,
+        overrides: {}
+    };
+
+    let displayYear = new Date().getFullYear();
+    let displayMonth = new Date().getMonth();
+    let selectedDateKey = null;
+
+    // Load initial values into settings inputs
+    document.getElementById('startDateInput').value = appData.startDate;
+    document.getElementById('stdOtInput').value = appData.standardOtMins || 30;
+
+    function saveAppData() {
+        localStorage.setItem('rotaAppData', JSON.stringify(appData));
+    }
+
+    function showPage(pageId) {
+        document.querySelectorAll('.page-view').forEach(p => p.classList.add('hidden'));
+        document.getElementById(pageId).classList.remove('hidden');
+    }
+
+    function saveSettings() {
+        const startVal = document.getElementById('startDateInput').value;
+        const otVal = parseInt(document.getElementById('stdOtInput').value) || 0;
+
+        if (startVal) {
+            appData.startDate = startVal;
+            appData.standardOtMins = otVal;
+            saveAppData();
+            renderCalendar();
+            showPage('calendarView');
+        }
+    }
+
+    function changeMonth(delta) {
+        displayMonth += delta;
+        if (displayMonth > 11) { displayMonth = 0; displayYear++; }
+        if (displayMonth < 0) { displayMonth = 11; displayYear--; }
+        renderCalendar();
+    }
+
+    function getShiftStatus(targetDateStr) {
+        const start = new Date(appData.startDate);
+        const target = new Date(targetDateStr);
+        const diffDays = Math.floor((target - start) / (1000 * 60 * 60 * 24));
+        let cycleDay = diffDays % 8;
+        if (cycleDay < 0) cycleDay += 8;
+        return (cycleDay >= 0 && cycleDay <= 3) ? 'WORK' : 'OFF';
+    }
+
+    function openModal(dateKey) {
+        selectedDateKey = dateKey;
+        const d = new Date(dateKey);
+        const dateFormatted = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        document.getElementById('modalTitle').innerText = 'Manage: ' + dateFormatted;
+
+        const stdMins = appData.standardOtMins || 30;
+        const stdHours = (stdMins / 60).toFixed(1);
+
+        // Dynamically build buttons including standard OT minutes
+        const btnsContainer = document.getElementById('modalButtonsContainer');
+        btnsContainer.innerHTML = `
+            <button class="modal-btn btn-full-ot" onclick="setOverride(12, 'Full OT')">+12h Overtime</button>
+            <button class="modal-btn btn-half-ot" onclick="setOverride(${stdHours}, 'Std OT')">+${stdMins}m Standard OT</button>
+            <button class="modal-btn btn-leave" onclick="setOverride(0, 'Leave')">Leave / Off</button>
+            <button class="modal-btn btn-reset" onclick="setOverride(null, '')">Reset Default</button>
+            <button class="modal-btn btn-cancel" onclick="closeModal()">Cancel</button>
+        `;
+
+        document.getElementById('modalOverlay').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('modalOverlay').style.display = 'none';
+    }
+
+    function setOverride(hours, label) {
+        if (hours === null) {
+            delete appData.overrides[selectedDateKey];
+        } else {
+            appData.overrides[selectedDateKey] = { hours: parseFloat(hours), label };
+        }
+        saveAppData();
+        closeModal();
+        renderCalendar();
+    }
+
+    function renderCalendar() {
+        const grid = document.getElementById('calendarGrid');
+        grid.innerHTML = '';
+
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        document.getElementById('monthTitle').innerText = `${monthNames[displayMonth]} ${displayYear}`;
+
+        const dayHeaders = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        dayHeaders.forEach(dh => {
+            const el = document.createElement('div');
+            el.className = 'day-header';
+            el.innerText = dh;
+            grid.appendChild(el);
+        });
+
+        const firstDay = new Date(displayYear, displayMonth, 1);
+        const lastDay = new Date(displayYear, displayMonth + 1, 0);
+
+        let startingDay = firstDay.getDay() - 1; // Mon = 0
+        if (startingDay === -1) startingDay = 6;
+
+        for (let i = 0; i < startingDay; i++) {
+            grid.appendChild(document.createElement('div'));
+        }
+
+        let totalScheduled = 0;
+        let totalOT = 0;
+
+        for (let day = 1; day <= lastDay.getDate(); day++) {
+            const mStr = String(displayMonth + 1).padStart(2, '0');
+            const dStr = String(day).padStart(2, '0');
+            const dateKey = `${displayYear}-${mStr}-${dStr}`;
+
+            const baseStatus = getShiftStatus(dateKey);
+            const card = document.createElement('div');
+            card.className = 'day-card';
+
+            let subText = baseStatus === 'WORK' ? '12h' : 'OFF';
+
+            if (appData.overrides[dateKey]) {
+                const ov = appData.overrides[dateKey];
+                if (ov.hours > 0) {
+                    card.classList.add('status-ot');
+                    subText = `+${ov.hours}h`;
+                    totalOT += ov.hours;
+                } else {
+                    card.classList.add('status-leave');
+                    subText = 'OFF';
+                }
+            } else {
+                if (baseStatus === 'WORK') {
+                    card.classList.add('status-work');
+                    totalScheduled += 12;
+                } else {
+                    card.classList.add('status-off');
+                }
+            }
+
+            card.innerHTML = `<div class="day-num">${day}</div><div class="day-sub">${subText}</div>`;
+            card.onclick = () => openModal(dateKey);
+            grid.appendChild(card);
+        }
+
+        document.getElementById('summaryCard').innerHTML = 
+            `Scheduled: <b>${totalScheduled}h</b> | Overtime: <b style="color:#d97706">${totalOT.toFixed(1)}h</b><br><span style="font-size:15px">Total Worked: <b>${(totalScheduled + totalOT).toFixed(1)}h</b></span>`;
+    }
+
+    renderCalendar();
+</script>
+</body>
+</html>
